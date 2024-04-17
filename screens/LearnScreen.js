@@ -123,7 +123,7 @@ export default function LearnScreen() {
         } else {
             // If the card flips back to the front, stop the sound
             if (sound) {
-                sound.setOnPlaybackStatusUpdate(null); // Remove the status update listener
+                sound.setOnPlaybackStatusUpdate(null);
                 await sound.stopAsync();
                 await sound.unloadAsync();
                 setSounds({ ...sounds, [id]: null });
@@ -197,20 +197,20 @@ export default function LearnScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#34ace0', // Vibrant blue background for the screen
+        backgroundColor: '#34ace0',
         padding: 20, // Padding around the grid
     },
     cardContainer: {
-        width: '33.333%', // Each card container takes up 1/3 of the container width
-        aspectRatio: 1, // Keep the aspect ratio of cards consistent (1:1 for square cards)
-        padding: 5, // Spacing between cards
+        width: '33.333%', 
+        aspectRatio: 1, 
+        padding: 5, 
     },
     card: {
-        flex: 1, // Take up all available space in the card container
+        flex: 1, 
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#ff9f1a', // Playful orange color for the card front
-        borderRadius: 10, // Rounded corners for the card
+        backgroundColor: '#ff9f1a', 
+        borderRadius: 10, 
         backfaceVisibility: 'hidden', // Hide the back face of the card when flipped
         // The following shadow properties are for iOS
         shadowColor: '#000',
@@ -223,20 +223,20 @@ const styles = StyleSheet.create({
     cardImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 10, // Ensure the image corners are also rounded
+        borderRadius: 10, 
     },
     cardBack: {
-        position: 'absolute', // Position card back absolutely to overlap with the front
+        position: 'absolute', 
         width: '100%',
         height: '100%',
         backgroundColor: '#ffb142', // Slightly different shade for the card back
-        borderRadius: 10, // Rounded corners for the card back
+        borderRadius: 10, 
         justifyContent: 'center',
         alignItems: 'center',
     },
     cardText: {
-        color: '#ffffff', // White color for text on the back of the card
-        fontSize: 18, // Font size for the description text
+        color: '#ffffff', 
+        fontSize: 18, 
         fontWeight: 'bold',
         textAlign: 'center',
         paddingHorizontal: 10,
