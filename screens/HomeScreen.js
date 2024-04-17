@@ -27,32 +27,32 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffde59', // A bright yellow background
+        backgroundColor: '#ffde59', 
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#ffffff', // White color for text
+        color: '#ffffff', 
         marginBottom: 24,
-        textShadowColor: 'rgba(0, 0, 0, 0.75)', // Text shadow for depth
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: { width: -1, height: 1 },
         textShadowRadius: 10
     },
     button: {
-        backgroundColor: '#ff785a', // A playful orange color for buttons
-        borderRadius: 20, // Rounded corners for buttons
+        backgroundColor: '#ff785a',
+        borderRadius: 20, 
         paddingVertical: 10,
         paddingHorizontal: 20,
-        shadowColor: '#ff785a', // Matching shadow color
+        shadowColor: '#ff785a', 
         shadowOpacity: 0.8,
         shadowRadius: 5,
         elevation: 6,
-        marginVertical: 10, // Space between buttons
+        marginVertical: 10, 
     },
     buttonText: {
-        color: '#ffffff', // White color for button text
+        color: '#ffffff',
         fontSize: 18,
         fontWeight: 'bold',
     },
