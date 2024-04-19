@@ -1,8 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Image, FlatList } from 'react-native';
 import { Audio } from 'expo-av';
 
-// Example data array for 9 cards
 const cardData = [
     {
         id: '1', image: require('../assets/images/dog.jpg'), description: 'Dog',
@@ -80,7 +79,7 @@ const cardData = [
 
 export default function LearnScreen() {
     const flipAnimValues = useRef(cardData.reduce((acc, card) => {
-        acc[card.id] = new Animated.Value(0); // 0 is the initial value for the front of the card
+        acc[card.id] = new Animated.Value(0);
         return acc;
     }, {})).current;
 
@@ -89,48 +88,82 @@ export default function LearnScreen() {
         return acc;
     }, {}));
 
-    // State to keep track of sound objects
     const [sounds, setSounds] = useState({});
 
-    // Function to handle playing sound with delay
+    useEffect(() => {
+        return () => {
+            // Only attempt to unload sounds that have been loaded.
+            Object.keys(sounds).forEach(key => {
+                sounds[key] && sounds[key].unloadAsync().catch(error => {
+                    console.error("Error unloading sound:", error);
+                });
+            });
+        };
+    }, [sounds]); // Dependency array includes sounds to ensure clean-up runs when sounds change
+
     const playSoundWithDelay = async (sound, delay) => {
-        await sound.playAsync();
-        sound.setOnPlaybackStatusUpdate(async (playbackStatus) => {
-            if (playbackStatus.didJustFinish) {
-                setTimeout(async () => {
-                    await sound.setPositionAsync(0); // Rewind to start
-                    await playSoundWithDelay(sound, delay); // Recursively play with delay
-                }, delay);
-            }
-        });
+        try {
+            // Set up the playback status update function.
+            const onPlaybackStatusUpdate = async (playbackStatus) => {
+                if (playbackStatus.didJustFinish) {
+                    setTimeout(async () => {
+                        try {
+                            // Before playing the sound again, make sure it is loaded.
+                            const status = await sound.getStatusAsync();
+                            if (status.isLoaded) {
+                                await sound.setPositionAsync(0);
+                                await sound.playAsync();
+                            }
+                        } catch (error) {
+                            console.error("Error replaying sound:", error);
+                        }
+                    }, delay);
+                }
+            };
+
+            // Assign the function to handle playback status updates.
+            sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+
+            // Start playing the sound.
+            await sound.playAsync();
+        } catch (error) {
+            console.error("Error playing sound:", error);
+        }
     };
 
-    // Function to flip a card and manage sound
     const flipCard = async (id) => {
         let isFlipped = flippedCards[id];
         let sound = sounds[id];
 
-        // If the card is about to flip to the back, load and play the sound
         if (!isFlipped) {
             if (!sound) {
-                const { sound: newSound } = await Audio.Sound.createAsync(
-                    cardData.find((card) => card.id === id).soundUri,
-                    { shouldPlay: false }
-                );
-                setSounds({ ...sounds, [id]: newSound });
-                await playSoundWithDelay(newSound, 3000); // 3000 ms delay
+                try {
+                    // Audio.Sound.createAsync already loads the sound,
+                    // so you do not need to call loadAsync() again.
+                    const { sound: newSound } = await Audio.Sound.createAsync(
+                        cardData.find(card => card.id === id).soundUri
+                    );
+                    setSounds(prev => ({ ...prev, [id]: newSound }));
+                    // If the sound is not loaded, this will catch the error.
+                    await playSoundWithDelay(newSound, 3000);
+                } catch (error) {
+                    console.error("Error loading sound:", error);
+                }
+            } else {
+                // If sound is already loaded, just play it.
+                await playSoundWithDelay(sound, 3000);
             }
         } else {
-            // If the card flips back to the front, stop the sound
             if (sound) {
                 sound.setOnPlaybackStatusUpdate(null);
                 await sound.stopAsync();
+                // The sound should be unloaded here since we are flipping back the card.
                 await sound.unloadAsync();
-                setSounds({ ...sounds, [id]: null });
+                setSounds(prev => ({ ...prev, [id]: null }));
             }
         }
 
-        // Start the flip animation
+        // Continue with the animation part
         Animated.spring(flipAnimValues[id], {
             toValue: isFlipped ? 0 : 180,
             friction: 8,
@@ -138,45 +171,23 @@ export default function LearnScreen() {
             useNativeDriver: true,
         }).start();
 
-        // Update the flipped state for the card
-        setFlippedCards((prevState) => ({
-            ...prevState,
-            [id]: !isFlipped
-        }));
+        setFlippedCards(prev => ({ ...prev, [id]: !isFlipped }));
     };
 
     const renderItem = ({ item }) => {
         const frontAnimatedStyle = {
-            transform: [
-                {
-                    rotateY: flipAnimValues[item.id].interpolate({
-                        inputRange: [0, 180],
-                        outputRange: ['0deg', '180deg']
-                    })
-                }
-            ]
+            transform: [{ rotateY: flipAnimValues[item.id].interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] }) }],
         };
-
         const backAnimatedStyle = {
-            transform: [
-                {
-                    rotateY: flipAnimValues[item.id].interpolate({
-                        inputRange: [0, 180],
-                        outputRange: ['180deg', '360deg']
-                    })
-                }
-            ]
+            transform: [{ rotateY: flipAnimValues[item.id].interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] }) }],
         };
-
-        const frontOpacity = flippedCards[item.id] ? 0 : 1;
-        const backOpacity = flippedCards[item.id] ? 1 : 0;
 
         return (
             <TouchableOpacity onPress={() => flipCard(item.id)} style={styles.cardContainer}>
-                <Animated.View style={[styles.card, frontAnimatedStyle, { opacity: frontOpacity }]}>
+                <Animated.View style={[styles.card, frontAnimatedStyle, { opacity: flippedCards[item.id] ? 0 : 1 }]}>
                     <Image source={item.image} style={styles.cardImage} />
                 </Animated.View>
-                <Animated.View style={[styles.card, backAnimatedStyle, styles.cardBack, { opacity: backOpacity }]}>
+                <Animated.View style={[styles.card, backAnimatedStyle, styles.cardBack, { opacity: flippedCards[item.id] ? 1 : 0 }]}>
                     <Text style={styles.cardText}>{item.description}</Text>
                 </Animated.View>
             </TouchableOpacity>
@@ -187,8 +198,8 @@ export default function LearnScreen() {
         <FlatList
             data={cardData}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={3} // Set the number of columns for the grid
+            keyExtractor={item => item.id}
+            numColumns={3}
             style={styles.container}
         />
     );
@@ -198,19 +209,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#34ace0',
-        padding: 20, // Padding around the grid
+        padding: 20,
     },
     cardContainer: {
-        width: '33.333%', 
-        aspectRatio: 1, 
-        padding: 5, 
+        width: '33.333%',
+        aspectRatio: 1,
+        padding: 5,
     },
     card: {
-        flex: 1, 
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#ff9f1a', 
-        borderRadius: 10, 
+        backgroundColor: '#ff9f1a',
+        borderRadius: 10,
         backfaceVisibility: 'hidden', // Hide the back face of the card when flipped
         // The following shadow properties are for iOS
         shadowColor: '#000',
@@ -226,17 +237,17 @@ const styles = StyleSheet.create({
         borderRadius: 10, 
     },
     cardBack: {
-        position: 'absolute', 
+        position: 'absolute',
         width: '100%',
         height: '100%',
         backgroundColor: '#ffb142', // Slightly different shade for the card back
-        borderRadius: 10, 
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
     },
     cardText: {
         color: '#ffffff', 
-        fontSize: 18, 
+        fontSize: 18,
         fontWeight: 'bold',
         textAlign: 'center',
         paddingHorizontal: 10,
