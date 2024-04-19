@@ -1,4 +1,4 @@
-Install Dependencies:
+Install Libraries:
 
 npm install @react-navigation/native
 
